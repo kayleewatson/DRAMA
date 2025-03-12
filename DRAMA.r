@@ -9,10 +9,6 @@ library(dplyr, exclude = c("filter", "lag"))
 library(tidyr)
 library(optparse)
 
-#args = commandArgs(trailingOnly=TRUE)
-#if (length(args)<3) {
-#    stop("Please supply all required filenames", call.=FALSE)
-#}
 
 # Define options
 option_list <- list(
@@ -41,19 +37,6 @@ opt_parser <- OptionParser(option_list = option_list)
 options <- parse_args(opt_parser)
 add_labels <- options$labels
 
-# Check if any files are empty
-#checkEmpty <- function(input_file) {
-#    file_info <- file.info(input_file)
-#    if (file_info$size == 0) {
-#        cat(paste0("\nFile is empty: ",input_file,"\n\n"))
-#        quit()
-#    }
-#}
-
-#checkEmpty(args[1])
-#checkEmpty(args[2])
-#checkEmpty(args[3])
-
 # Load files
 cat("\n\nLoading input files...\n\n\n")
 #sample_1 <- read.delim(args[1], sep="\t", header=TRUE)
@@ -66,8 +49,7 @@ sample_2 <- read.delim(options$refstats2, sep="\t", header=TRUE)
 KS <- read.delim(options$ksinput, sep="\t", header=TRUE)
 chrom=as.character(options$name)
 
-
-# filter for positive strand (negative strand is below)
+# separate positive/negative strand
 sample_1_pos <- sample_1[(sample_1$strand == "+"),]
 sample_2_pos <- sample_2[(sample_2$strand == "+"),]
 sample_1_neg <- sample_1[(sample_1$strand == "-"),]
@@ -131,7 +113,6 @@ normalizeStats <- function(indexed_df) {
 
     ## Mean ionic current ##
     indexed_df$current.mean.diff <- indexed_df$sample1_current_mean - indexed_df$sample2_current_mean # get the difference between the mean ionic current for both samples
-    #indexed_df$current.window.means <- NA # Create a new column to store the rolling mean for ionic current
     
     cat(paste0("Calculating Generalized ESD for mean ionic current with alpha=",options$pvalue,"...\n\n"))
     
@@ -158,7 +139,6 @@ normalizeStats <- function(indexed_df) {
             # Calculate generalized ESD for values in index group
             subset_range <- (exclude_n + 1):(nrow(group_data) - exclude_n)
             norm_current <- indexed_df$current.window.means.FC[indexed_df$group == i][subset_range]
-            #alpha <- 0.05
             alpha <- options$pvalue
             outliers <- numeric(0)
             len <- length(norm_current)
@@ -175,7 +155,6 @@ normalizeStats <- function(indexed_df) {
                 # Store the p-value
                 p_values[n] <- p_value
                 # Flag as a right-tailed outlier if p-value is less than alpha (one-tailed test)
-                #if (!is.na(p_value) && !is.na(norm_current[n]) && !is.na(mean_data) && p_value < alpha && norm_current[n] > mean_data) {
                 if (!is.na(p_value) && p_value < alpha && norm_current[n] > mean_data) {    
                     right_tailed_flags[n] <- TRUE
                 } else {
